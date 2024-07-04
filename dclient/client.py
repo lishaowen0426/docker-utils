@@ -1,8 +1,8 @@
 import docker
 
 
-class DockerClient(docker.DockerClient):
-    def __init__(self, host=None, port=None, sock=None, dockerfile=None, compose=None):
+class DockerClient(docker.APIClient):
+    def __init__(self, host=None, port=None, sock=None):
 
         if sock is not None:
             connection_str = f"unix://{sock}"
@@ -11,9 +11,7 @@ class DockerClient(docker.DockerClient):
         else:
             raise Exception("Either socket or host and port needs to be specified")
 
-        docker.DockerClient.__init__(self, base_url=connection_str)
-        self.dockerfile = dockerfile
-        self.compose = compose
+        docker.APIClient.__init__(self, base_url=connection_str)
 
     @classmethod
     def unix_sock(cls, sock):
