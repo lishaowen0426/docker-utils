@@ -1,12 +1,12 @@
 import argparse
 import paramiko
 import os
-import tag
+from .tag import TagManager
 from sys import platform
 from pathlib import Path
 
 import paramiko.client
-from client import DockerClient
+from .client import DockerClient
 
 
 parser = argparse.ArgumentParser(prog="client", description="docker utils client")
@@ -20,6 +20,12 @@ parser.add_argument(
     nargs="?",
     default=argparse.SUPPRESS,
     help="repository",
+)
+parser.add_argument(
+    "--docker",
+    nargs="?",
+    default=argparse.SUPPRESS,
+    help="directory contains Dockerfile and/or docker-compose.yml",
 )
 
 subparsers = parser.add_subparsers(help="subcommands help", dest="action")
@@ -58,7 +64,10 @@ default_tag = "latest"
 if "repo" not in args:
     raise Exception("require the repo")
 
-project_dir = os.getcwd()
+if "docker" not in args:
+    raise Exception("require the docker directory")
+
+project_dir = Path(args.docker)
 
 
 if "sock" in args:
@@ -77,7 +86,9 @@ if args.action == "build":
 
     tag = f"{args.repo}:{default_tag}"
 
-    resp = client.build(path=project_dir, quiet=False, rm=True, tag=tag, decode=True)
+    resp = client.build(
+        path=str(project_dir), quiet=False, rm=True, tag=tag, decode=True
+    )
     for line in resp:
         if "stream" in line:
             print(line["stream"])
@@ -92,7 +103,7 @@ elif args.action == "push":
     """
 
     # save last tag
-    tag_mgr = tag.TagManager("http://192.168.0.213:34592/v2/")
+    tag_mgr = TagManager("http://192.168.0.213:34592/v2/")
     tag_mgr.valid()
     tag_mgr.retag("loto7", "latest", "second")
 
@@ -103,7 +114,7 @@ elif args.action == "push":
     for line in resp:
         print(line)
 
-    compose_file = Path.cwd() / "docker-compose.yml"
+    compose_file = project_dir / "docker-compose.yml"
     if compose_file.is_file():
         print("push docker-compose.yml")
         if "user" not in args:
