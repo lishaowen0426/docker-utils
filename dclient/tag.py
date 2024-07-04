@@ -28,14 +28,20 @@ class TagManager:
     def get_digest(self, name, tag):
         url = urljoin(self.base_url, f"{name}/manifests/{tag}")
         resp = requests.head(url, headers=self.headers)
-        resp.raise_for_status()
-        return resp.headers["Docker-Content-Digest"]
+        return resp
+        
 
     def delete_image(self, name, tag):
-        digest = self.get_digest(name, tag)
-        url = urljoin(self.base_url, f"{name}/manifests/{digest}")
+        resp = self.get_digest(name, tag)
+        if resp.status_code == 404: 
+            print(f"{name}:{tag} not exist")
+            return
+        url = urljoin(self.base_url, f"{name}/manifests/{resp.headers["Docker-Content-Digest"]}")
         resp = requests.delete(url, headers=self.headers)
-        resp.raise_for_status()
+        if resp.status_code == 404:
+            print(f"{name}:{tag} not exist")
+        if resp.status_code == 200:
+            print(f"{name}:{tag} deleted")
 
     def retag(self, name, old_tag, new_tag):
         manifest = self.get_manifest(name, old_tag)

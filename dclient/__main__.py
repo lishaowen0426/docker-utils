@@ -1,12 +1,12 @@
 import argparse
 import paramiko
 import os
-from .tag import TagManager
+from tag import TagManager
 from sys import platform
 from pathlib import Path
 
 import paramiko.client
-from .client import DockerClient
+from client import DockerClient
 
 
 parser = argparse.ArgumentParser(prog="client", description="docker utils client")
@@ -105,6 +105,9 @@ elif args.action == "push":
     # save last tag
     tag_mgr = TagManager("http://192.168.0.213:34592/v2/")
     tag_mgr.valid()
+    tag_mgr.delete_image("loto7", "latest")
+    tag_mgr.delete_image("loto7", "second")
+    exit(0)
     tag_mgr.retag("loto7", "latest", "second")
 
     # retag
