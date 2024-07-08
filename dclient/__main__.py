@@ -1,13 +1,12 @@
 import argparse
-import paramiko
-import os
-from tag import TagManager
-from sys import platform
 from pathlib import Path
+from sys import platform
 
+import paramiko
 import paramiko.client
-from client import DockerClient
 
+from dclient.client import DockerClient
+from dclient.tag import TagManager
 
 parser = argparse.ArgumentParser(prog="client", description="docker utils client")
 
@@ -39,14 +38,14 @@ parser_push.add_argument(
     "-d",
     "--dest",
     nargs="?",
-    default=argparse.SUPPRESS,
+    default="192.168.0.213",
     help="destination host",
 )
 parser_push.add_argument(
     "-p",
     "--port",
     nargs="?",
-    default=argparse.SUPPRESS,
+    default=34592,
     help="registry port",
 )
 parser_push.add_argument(
@@ -76,9 +75,12 @@ elif "host" in args and "port" in args:
     client = DockerClient.tcp(host=args.host, port=args.port)
 else:
     if platform == "linux" or platform == "darwin":
+        sock_fd = Path("/var/run/docker.sock")
+        if not sock_fd.exists():
+            raise Exception("/var/run/docker.sock does not exist")
         client = DockerClient.unix_sock("/var/run/docker.sock")
     elif platform == "win32":
-        client = DockerClient.tcp(host="127.0.0.1", port="2375")
+        raise Exception("Windows is unsupported")
     else:
         raise Exception("either sock or host and port are required")
 
@@ -99,15 +101,10 @@ elif args.action == "push":
     if "port" not in args:
         raise Exception("port is required")
 
-    """
-    """
-
     # save last tag
     tag_mgr = TagManager("http://192.168.0.213:34592/v2/")
     tag_mgr.valid()
-    tag_mgr.delete_image("loto7", "latest")
-    tag_mgr.delete_image("loto7", "second")
-    exit(0)
+
     tag_mgr.retag("loto7", "latest", "second")
 
     # retag
@@ -119,11 +116,12 @@ elif args.action == "push":
 
     compose_file = project_dir / "docker-compose.yml"
     if compose_file.is_file():
-        print("push docker-compose.yml")
+        print(f"push docker-compose.yml: {compose_file}")
         if "user" not in args:
             raise Exception("user is required")
 
         sshClient = paramiko.client.SSHClient()
+        sshClient.load_system_host_keys()
         sshClient.set_missing_host_key_policy(paramiko.RejectPolicy())
         pkey = Path.home() / ".ssh" / "id_ed25519.pub"
 
@@ -131,4 +129,4 @@ elif args.action == "push":
             hostname=args.dest, username=args.user, key_filename=str(pkey)
         )
         ftp = sshClient.open_sftp()
-        ftp.put(str(compose_file), f"/home/{args.user}/{args.repo}/docker-compose.yml")
+        ftp.put(str(compose_file), f"{args.repo}/docker-compose.yml")
