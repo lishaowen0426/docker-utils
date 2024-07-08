@@ -1,4 +1,5 @@
 import argparse
+import os
 from pathlib import Path
 from sys import platform
 
@@ -59,6 +60,16 @@ parser_push.add_argument(
 args = parser.parse_args()
 
 default_tag = "latest"
+
+
+def find_pub_key():
+    p = Path.home() / ".ssh"
+    for d in os.listdir(p):
+        if d.endswith(".pub"):
+            return d
+
+    raise Exception("cannot find public key")
+
 
 if "repo" not in args:
     raise Exception("require the repo")
@@ -123,7 +134,8 @@ elif args.action == "push":
         sshClient = paramiko.client.SSHClient()
         sshClient.load_system_host_keys()
         sshClient.set_missing_host_key_policy(paramiko.RejectPolicy())
-        pkey = Path.home() / ".ssh" / "id_ed25519.pub"
+
+        pkey = Path.home() / ".ssh" / find_pub_key()
 
         sshClient.connect(
             hostname=args.dest, username=args.user, key_filename=str(pkey)
