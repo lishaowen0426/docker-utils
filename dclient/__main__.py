@@ -32,6 +32,7 @@ subparsers = parser.add_subparsers(help="subcommands help", dest="action")
 
 
 parser_build = subparsers.add_parser("build", help="build and tag an image")
+parser_build.add_argument("--platform", nargs="?", default="linux/amd64")
 
 parser_push = subparsers.add_parser("push", help="push compose file")
 parser_push.add_argument("-f", "--file", nargs="?", default="docker-compose.yml")
@@ -100,7 +101,12 @@ if args.action == "build":
     tag = f"{args.repo}:{default_tag}"
 
     resp = client.build(
-        path=str(project_dir), quiet=False, rm=True, tag=tag, decode=True
+        path=str(project_dir),
+        quiet=False,
+        rm=True,
+        tag=tag,
+        decode=True,
+        platform=args.platform,
     )
     for line in resp:
         if "stream" in line:
