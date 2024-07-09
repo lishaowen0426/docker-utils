@@ -37,7 +37,7 @@ class Compose(Resource):
         try:
             result = subprocess.run(
                 "docker compose up -d",
-                cwd=Path.home() / compose,
+                cwd=f"/home/tydocker/{compose}",
                 check=False,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
