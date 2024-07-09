@@ -43,9 +43,9 @@ docker push  "$HOST:$PORT/${repo}:latest"
 DOCKER_COMPOSE=""
 if [ -f "${dockerfile}/docker-compose.yml" ]; then
     echo "push docker-compose.yml"
-    scp ${dockerfile}/docker-compose.yml hpe:${repo}/docker-compose.yml
-    DOCKER_COMPOSE="${repo}/docker-compose.yml"
+    ssh hpe "mkdir -p /home/tydocker/${repo}" && scp  ${dockerfile}/docker-compose.yml hpe:/home/tydocker/${repo}/docker-compose.yml
+    DOCKER_COMPOSE="${repo}"
 fi
 
 
-curl -d "{\"repo\":\"${repo}\", \"compose\":\"${DOCKER_COMPOSE}\"}" -H "Content-Type: application/json" -X POST http://localhost:5000/docker-compose
+curl -d "{\"repo\":\"${repo}\", \"compose\":\"${DOCKER_COMPOSE}\"}" -H "Content-Type: application/json" -X POST http://192.168.0.213:34594/docker-compose
