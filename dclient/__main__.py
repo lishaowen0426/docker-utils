@@ -58,6 +58,10 @@ parser_push.add_argument(
     help="user name",
 )
 
+parser_retag = subparsers.add_parser("retag", help="retag remote image")
+parser_retag.add_argument("-f", "--from", nargs="?", default=argparse.SUPPRESS)
+parser_retag.add_argument("-t", "--to", nargs="?", default=argparse.SUPPRESS)
+
 args = parser.parse_args()
 
 default_tag = "latest"
@@ -75,28 +79,32 @@ def find_pub_key():
 if "repo" not in args:
     raise Exception("require the repo")
 
-if "docker" not in args:
+if "docker" not in args and args.action != "retag":
     raise Exception("require the docker directory")
 
-project_dir = Path(args.docker)
 
-
-if "sock" in args:
-    client = DockerClient.unix_sock(args.sock)
-elif "host" in args and "port" in args:
-    client = DockerClient.tcp(host=args.host, port=args.port)
-else:
-    if platform == "linux" or platform == "darwin":
-        sock_fd = Path("/var/run/docker.sock")
-        if not sock_fd.exists():
-            raise Exception("/var/run/docker.sock does not exist")
-        client = DockerClient.unix_sock("/var/run/docker.sock")
-    elif platform == "win32":
-        raise Exception("Windows is unsupported")
+def get_client():
+    if "sock" in args:
+        client = DockerClient.unix_sock(args.sock)
+    elif "host" in args and "port" in args:
+        client = DockerClient.tcp(host=args.host, port=args.port)
     else:
-        raise Exception("either sock or host and port are required")
+        if platform == "linux" or platform == "darwin":
+            sock_fd = Path("/var/run/docker.sock")
+            if not sock_fd.exists():
+                raise Exception("/var/run/docker.sock does not exist")
+            client = DockerClient.unix_sock("/var/run/docker.sock")
+        elif platform == "win32":
+            raise Exception("Windows is unsupported")
+        else:
+            raise Exception("either sock or host and port are required")
+
+    return client
+
 
 if args.action == "build":
+    client = get_client()
+    project_dir = Path(args.docker)
 
     tag = f"{args.repo}:{default_tag}"
 
@@ -113,6 +121,8 @@ if args.action == "build":
             print(line["stream"])
 
 elif args.action == "push":
+    client = get_client()
+    project_dir = Path(args.docker)
     if "dest" not in args:
         raise Exception("destination is required")
     if "port" not in args:
@@ -122,7 +132,7 @@ elif args.action == "push":
     tag_mgr = TagManager("http://192.168.0.213:34592/v2/")
     tag_mgr.valid()
 
-    tag_mgr.retag("loto7", "latest", "second")
+    tag_mgr.retag(args.repo, "latest", "second")
 
     # retag
     remote_repo = f"{args.dest}:{args.port}/{args.repo}"
@@ -148,3 +158,7 @@ elif args.action == "push":
         )
         ftp = sshClient.open_sftp()
         ftp.put(str(compose_file), f"{args.repo}/docker-compose.yml")
+elif args.action == "retag":
+    tag_mgr = TagManager("http://192.168.0.213:34592/v2/")
+    tag_mgr.valid()
+    tag_mgr.retag(args.repo, "latest", "second")
